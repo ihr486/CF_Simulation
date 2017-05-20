@@ -145,7 +145,7 @@ static double self_inductance_ref(const coil_t& coil)
 
 int main(int argc, const char *argv[])
 {
-    coil_t tx{30E-3, 0.1E-3, 0.22E-3, 100};
+    coil_t tx{30E-3, 0.1E-3, 0.22E-3, 50};
     double L = self_inductance(tx);
     printf("Self inductance [Biot-Savart] = %lf[uH]\n", L * 1E+6);
     return 0;

@@ -15,21 +15,9 @@ typedef struct vector_tag
 
 typedef struct coil_tag
 {
-    double R, P, N;
-    double *sin_table, *cos_table;
+    double R, P;
+    int N;
 } coil_t;
-
-static void init_coil(coil_t *coil)
-{
-    coil->sin_table = aligned_alloc(32, sizeof(double) * THETA_DIV);
-    coil->cos_table = aligned_alloc(32, sizeof(double) * THETA_DIV);
-    for (int i = 0; i < THETA_DIV; i++)
-    {
-        double rad = 2.0 * PI * i / THETA_DIV;
-        coil->sin_table[i] = sin(rad);
-        coil->cos_table[i] = cos(rad);
-    }
-}
 
 extern vector_t biot_savart(const vector_t v, const coil_t *coil);
 
@@ -45,7 +33,7 @@ static vector_t vsub(const vector_t a, const vector_t b)
 
 static vector_t vcross(const vector_t a, const vector_t b)
 {
-    return (vector_t){a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
+    return (vector_t){a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y};
 }
 
 static vector_t vscale(const vector_t v, double c)
@@ -98,8 +86,7 @@ static double self_inductance(const coil_t *coil)
 
 int main(int argc, const char *argv[])
 {
-    coil_t tx = {30E-3, 0.22E-3, 100, NULL, NULL};
-    init_coil(&tx);
+    coil_t tx = {30E-3, 0.22E-3, 100};
     printf("Self inductance = %lf[uH]\n", self_inductance(&tx) * 1E+6);
     return 0;
 }

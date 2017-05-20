@@ -45,7 +45,8 @@ static vector_t vsub(const vector_t a, const vector_t b)
 
 static vector_t vcross(const vector_t a, const vector_t b)
 {
-    return (vector_t){a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
+    //return (vector_t){a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
+    return (vector_t){a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y};
 }
 
 static vector_t vscale(const vector_t v, double c)
