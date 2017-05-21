@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 
 #define THETA_DIV (64)  //Division of the coil current
 #define PHI_DIV (64)    //Angular resolution of the magnetic field
@@ -84,13 +85,13 @@ static double self_inductance(const coil_t *coil)
     {
         for (int phi = 0; phi < PHI_DIV; phi++)
         {
-            double rad = 2.0 * PI * phi / PHI_DIV;
             for (int r = 0; r < R_DIV; r++)
             {
                 double dist = coil->R * (r + 0.5) / R_DIV;
-                vector_t v = {dist * cos(rad), 0.5 * d * coil->P * (coil->N - 1) / L_DIV, dist * sin(rad)};
+                vector_t v = {dist * coil->cos_table[phi], 0.5 * d * coil->P * (coil->N - 1) / L_DIV, dist * coil->sin_table[phi]};
                 double dS = PI * coil->R * coil->R / (R_DIV * R_DIV) * (2 * r + 1) / PHI_DIV;
-                B_total -= biot_savart(v, coil).y * dS;
+                vector_t B = biot_savart(v, coil);
+                B_total -= dS * (B.y + B.x * 1E-4 + B.z * 1E-4);
             }
         }
     }
@@ -101,6 +102,10 @@ int main(int argc, const char *argv[])
 {
     coil_t tx = {30E-3, 0.22E-3, 100, NULL, NULL};
     init_coil(&tx);
-    printf("Self inductance = %lf[uH]\n", self_inductance(&tx) * 1E+6);
+    double start_time = (double)clock() / CLOCKS_PER_SEC;
+    double L = self_inductance(&tx);
+    double finish_time = (double)clock() / CLOCKS_PER_SEC;
+    printf("Self inductance = %lf[uH]\n", L * 1E+6);
+    printf("Elapsed time = %lf[ms]\n", (finish_time - start_time) * 1E+3);
     return 0;
 }

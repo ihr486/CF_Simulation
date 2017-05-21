@@ -4,11 +4,11 @@ ASSRCS := $(wildcard *.S)
 CXX := g++
 CC := gcc
 AS := as
-CXXFLAGS := -Wall -Wextra -std=c++11 -O2 -mavx2
-CFLAGS := -Wall -Wextra -std=c11 -O2 -mavx2
+CXXFLAGS := -Wall -Wextra -std=c++11 -O3 -march=skylake -mavx2 -mfma
+CFLAGS := -Wall -Wextra -std=c11 -O3 -march=skylake -mavx2 -mfma
 ASFLAGS :=
 LDFLAGS := -lm
-BINS := self1 self2 self3
+BINS := self1 self2 self3 reciprocal dotproduct
 CXXOBJS := $(CXXSRCS:%.cpp=%.o)
 COBJS := $(CSRCS:%.c=%.o)
 ASOBJS := $(ASSRCS:%.S=%.o)
@@ -28,3 +28,7 @@ self2: self2.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 self3: self3.o biot_savart.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+reciprocal: test1.o reciprocal.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+dotproduct: test2.o dotproduct.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
