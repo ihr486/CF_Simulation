@@ -4,9 +4,9 @@ ASSRCS := $(wildcard *.S)
 CXX := g++
 CC := gcc
 AS := as
-CXXFLAGS := -Wall -Wextra -std=c++11 -O3 -march=skylake -mavx2 -mfma
-CFLAGS := -Wall -Wextra -std=c11 -O3 -march=skylake -mavx2 -mfma
-ASFLAGS :=
+CXXFLAGS := -Wall -Wextra -std=c++11 -Ofast -march=skylake -mavx2 -mfma
+CFLAGS := -Wall -Wextra -std=c11 -Ofast -march=skylake -mavx2 -mfma
+ASFLAGS := -msse2avx
 LDFLAGS := -lm
 BINS := self1 self2 self3 reciprocal dotproduct
 CXXOBJS := $(CXXSRCS:%.cpp=%.o)
@@ -15,7 +15,7 @@ ASOBJS := $(ASSRCS:%.S=%.o)
 .PHONY: all clean
 all: $(BINS)
 clean:
-	-@rm -vf $(BINS) $(CXXOBJS) $(COBJS)
+	-@rm -vf $(BINS) $(CXXOBJS) $(COBJS) $(ASOBJS)
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 %.o: %.c

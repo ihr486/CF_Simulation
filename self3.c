@@ -11,12 +11,12 @@
 
 typedef struct vector_tag
 {
-    double x, y, z, w;
+    float x, y, z, w;
 } vector_t;
 
 typedef struct coil_tag
 {
-    double R, P;
+    float R, P;
     int N;
 } coil_t;
 
@@ -37,12 +37,12 @@ static vector_t vcross(const vector_t a, const vector_t b)
     return (vector_t){a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y};
 }
 
-static vector_t vscale(const vector_t v, double c)
+static vector_t vscale(const vector_t v, float c)
 {
     return (vector_t){v.x * c, v.y * c, v.z * c};
 }
 
-static double vsize(const vector_t v)
+static float vsize(const vector_t v)
 {
     return sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
 }
@@ -50,7 +50,7 @@ static double vsize(const vector_t v)
 static vector_t biot_savart(const vector_t v, const coil_t *coil)
 {
     vector_t B = {0, 0, 0};
-    double l = 2.0 * PI * coil->R / THETA_DIV;
+    float l = 2.0 * PI * coil->R / THETA_DIV;
     for (int i = 0; i < coil->N; i++)
     {
         for (int theta = 0; theta < THETA_DIV; theta++)
@@ -58,14 +58,14 @@ static vector_t biot_savart(const vector_t v, const coil_t *coil)
             vector_t p = {coil->R * coil->cos_table[theta], coil->P * (i - 0.5 * (coil->N - 1)), coil->R * coil->sin_table[theta]};
             vector_t j = {-coil->sin_table[theta], 0, coil->cos_table[theta]};
             vector_t r = vsub(v, p);
-            double d = vsize(r);
+            float d = vsize(r);
             B = vadd(B, vscale(vcross(j, r), 1E-7 * l / (d * d * d)));
         }
     }
     return B;
 }*/
 
-static const double cos_table[PHI_DIV] = {
+static const float cos_table[PHI_DIV] = {
     1.0,
     0.995184726672,
     0.980785280403,
@@ -131,7 +131,7 @@ static const double cos_table[PHI_DIV] = {
     0.980785280403,
     0.995184726672
 };
-static const double sin_table[PHI_DIV] = {
+static const float sin_table[PHI_DIV] = {
     0.0,
     0.0980171403296,
     0.195090322016,
@@ -198,18 +198,18 @@ static const double sin_table[PHI_DIV] = {
     -0.0980171403296
 };
 
-static double self_inductance(const coil_t *coil)
+static float self_inductance(const coil_t *coil)
 {
-    double B_total = 0;
+    float B_total = 0;
     for (int d = 0; d < L_DIV; d++)
     {
         for (int phi = 0; phi < PHI_DIV; phi++)
         {
             for (int r = 0; r < R_DIV; r++)
             {
-                double dist = coil->R * (r + 0.5) / R_DIV;
+                float dist = coil->R * (r + 0.5) / R_DIV;
                 vector_t v = {dist * cos_table[phi], 0.5 * d * coil->P * (coil->N - 1) / L_DIV, dist * sin_table[phi]};
-                double dS = PI * coil->R * coil->R / (R_DIV * R_DIV) * (2 * r + 1) / PHI_DIV;
+                float dS = PI * coil->R * coil->R / (R_DIV * R_DIV) * (2 * r + 1) / PHI_DIV;
                 B_total -= biot_savart(v, coil).y * dS;
             }
         }
@@ -221,7 +221,7 @@ int main(int argc, const char *argv[])
 {
     coil_t tx = {30E-3, 0.22E-3, 100};
     double start_time = (double)clock() / CLOCKS_PER_SEC;
-    double L = self_inductance(&tx);
+    float L = self_inductance(&tx);
     double finish_time = (double)clock() / CLOCKS_PER_SEC;
     printf("Self inductance = %lf[uH]\n", L * 1E+6);
     printf("Elapsed time = %lf[ms]\n", (finish_time - start_time) * 1E+3);
