@@ -4,9 +4,9 @@ ASSRCS := $(wildcard *.S)
 CXX := g++
 CC := gcc
 AS := as
-CXXFLAGS := -Wall -Wextra -std=c++11 -Ofast -march=skylake -mavx2 -mfma
-CFLAGS := -Wall -Wextra -std=c11 -Ofast -march=skylake -mavx2 -mfma
-ASFLAGS := -msse2avx
+CXXFLAGS := -Wall -Wextra -std=c++11 -Ofast -march=broadwell -mavx2 -mfma
+CFLAGS := -Wall -Wextra -std=c11 -Ofast -march=broadwell -mavx2 -mfma
+ASFLAGS :=
 LDFLAGS := -lm
 BINS := self1 self2 self3 reciprocal dotproduct
 CXXOBJS := $(CXXSRCS:%.cpp=%.o)

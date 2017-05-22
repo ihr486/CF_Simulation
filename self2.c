@@ -16,23 +16,144 @@ typedef struct vector_tag
 
 typedef struct coil_tag
 {
-    float R, P, N;
-    float *sin_table, *cos_table;
+    float R, P;
+    int N;
 } coil_t;
 
-static void init_coil(coil_t *coil)
-{
-    coil->sin_table = aligned_alloc(32, sizeof(float) * THETA_DIV);
-    coil->cos_table = aligned_alloc(32, sizeof(float) * THETA_DIV);
-    for (int i = 0; i < THETA_DIV; i++)
-    {
-        float rad = 2.0 * PI * i / THETA_DIV;
-        coil->sin_table[i] = sin(rad);
-        coil->cos_table[i] = cos(rad);
-    }
-}
-
 //extern vector_t biot_savart(const vector_t v, const coil_t *coil);
+
+static const float cos_table[PHI_DIV] = {
+    1.0,
+    0.995184726672,
+    0.980785280403,
+    0.956940335732,
+    0.923879532511,
+    0.881921264348,
+    0.831469612303,
+    0.773010453363,
+    0.707106781187,
+    0.634393284164,
+    0.55557023302,
+    0.471396736826,
+    0.382683432365,
+    0.290284677254,
+    0.195090322016,
+    0.0980171403296,
+    6.12323399574e-17,
+    -0.0980171403296,
+    -0.195090322016,
+    -0.290284677254,
+    -0.382683432365,
+    -0.471396736826,
+    -0.55557023302,
+    -0.634393284164,
+    -0.707106781187,
+    -0.773010453363,
+    -0.831469612303,
+    -0.881921264348,
+    -0.923879532511,
+    -0.956940335732,
+    -0.980785280403,
+    -0.995184726672,
+    -1.0,
+    -0.995184726672,
+    -0.980785280403,
+    -0.956940335732,
+    -0.923879532511,
+    -0.881921264348,
+    -0.831469612303,
+    -0.773010453363,
+    -0.707106781187,
+    -0.634393284164,
+    -0.55557023302,
+    -0.471396736826,
+    -0.382683432365,
+    -0.290284677254,
+    -0.195090322016,
+    -0.0980171403296,
+    -1.83697019872e-16,
+    0.0980171403296,
+    0.195090322016,
+    0.290284677254,
+    0.382683432365,
+    0.471396736826,
+    0.55557023302,
+    0.634393284164,
+    0.707106781187,
+    0.773010453363,
+    0.831469612303,
+    0.881921264348,
+    0.923879532511,
+    0.956940335732,
+    0.980785280403,
+    0.995184726672
+};
+static const float sin_table[PHI_DIV] = {
+    0.0,
+    0.0980171403296,
+    0.195090322016,
+    0.290284677254,
+    0.382683432365,
+    0.471396736826,
+    0.55557023302,
+    0.634393284164,
+    0.707106781187,
+    0.773010453363,
+    0.831469612303,
+    0.881921264348,
+    0.923879532511,
+    0.956940335732,
+    0.980785280403,
+    0.995184726672,
+    1.0,
+    0.995184726672,
+    0.980785280403,
+    0.956940335732,
+    0.923879532511,
+    0.881921264348,
+    0.831469612303,
+    0.773010453363,
+    0.707106781187,
+    0.634393284164,
+    0.55557023302,
+    0.471396736826,
+    0.382683432365,
+    0.290284677254,
+    0.195090322016,
+    0.0980171403296,
+    1.22464679915e-16,
+    -0.0980171403296,
+    -0.195090322016,
+    -0.290284677254,
+    -0.382683432365,
+    -0.471396736826,
+    -0.55557023302,
+    -0.634393284164,
+    -0.707106781187,
+    -0.773010453363,
+    -0.831469612303,
+    -0.881921264348,
+    -0.923879532511,
+    -0.956940335732,
+    -0.980785280403,
+    -0.995184726672,
+    -1.0,
+    -0.995184726672,
+    -0.980785280403,
+    -0.956940335732,
+    -0.923879532511,
+    -0.881921264348,
+    -0.831469612303,
+    -0.773010453363,
+    -0.707106781187,
+    -0.634393284164,
+    -0.55557023302,
+    -0.471396736826,
+    -0.382683432365,
+    -0.290284677254,
+    -0.195090322016,
+    -0.0980171403296
+};
 
 static vector_t vadd(const vector_t a, const vector_t b)
 {
@@ -68,8 +189,8 @@ static vector_t biot_savart(const vector_t v, const coil_t *coil)
     {
         for (int theta = 0; theta < THETA_DIV; theta++)
         {
-            vector_t p = {coil->R * coil->cos_table[theta], coil->P * (i - 0.5 * (coil->N - 1)), coil->R * coil->sin_table[theta]};
-            vector_t j = {-coil->sin_table[theta], 0, coil->cos_table[theta]};
+            vector_t p = {coil->R * cos_table[theta], coil->P * (i - 0.5 * (coil->N - 1)), coil->R * sin_table[theta]};
+            vector_t j = {-sin_table[theta], 0, cos_table[theta]};
             vector_t r = vsub(v, p);
             float d = vsize(r);
             B = vadd(B, vscale(vcross(j, r), 1E-7 * l / (d * d * d)));
@@ -88,10 +209,10 @@ static float self_inductance(const coil_t *coil)
             for (int r = 0; r < R_DIV; r++)
             {
                 float dist = coil->R * (r + 0.5) / R_DIV;
-                vector_t v = {dist * coil->cos_table[phi], 0.5 * d * coil->P * (coil->N - 1) / L_DIV, dist * coil->sin_table[phi]};
+                vector_t v = {dist * cos_table[phi], 0.5 * d * coil->P * (coil->N - 1) / L_DIV, dist * sin_table[phi]};
                 float dS = PI * coil->R * coil->R / (R_DIV * R_DIV) * (2 * r + 1) / PHI_DIV;
                 vector_t B = biot_savart(v, coil);
-                B_total -= dS * (B.y + B.x * 1E-4 + B.z * 1E-4);
+                B_total -= dS * B.y;
             }
         }
     }
@@ -100,8 +221,7 @@ static float self_inductance(const coil_t *coil)
 
 int main(int argc, const char *argv[])
 {
-    coil_t tx = {30E-3, 0.22E-3, 100, NULL, NULL};
-    init_coil(&tx);
+    coil_t tx = {30E-3, 0.22E-3, 100};
     double start_time = (double)clock() / CLOCKS_PER_SEC;
     float L = self_inductance(&tx);
     double finish_time = (double)clock() / CLOCKS_PER_SEC;

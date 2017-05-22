@@ -1,29 +1,28 @@
         .intel_syntax noprefix
-        .section .text
+        .text
         .p2align 4,,15
-        .global biot_savart
-        .type   biot_savart, @function
-biot_savart:
-        subq    rsp, 40                 #Align stack to 16bytes
+        .global _biot_savart
+_biot_savart:
+        sub     rsp, 40                 #Align stack to 16bytes
         vmovapd [rsp], xmm0
         vmovss  8[rsp], xmm1
         vzeroall
         vmovss  12[rsp], xmm0
-        vmovaps 16[rsp], xmm0
         vmovss  xmm0, [rdi]
-        mulss   xmm0, .b_scale[rip]
+        vmulss  xmm0, xmm0, [rip + _b_scale]
         vmovss  36[rsp], xmm0           #32[rsp] = 1E-7*2*pi*coil->R/THETA_DIV
         mov     ecx, dword ptr 8[rdi]   #ecx = coil->N
         mov     eax, ecx
         sub     eax, 1
-        cvtsi2ss xmm0, eax
-        mulss   xmm0, .neg_half[rip]
-        mulss   xmm0, 4[rdi]
-        vmovss  32[rsp], xmm0           #24[rsp] = -0.5 * coil->P * (coil->N - 1)
+        vcvtsi2ss xmm0, xmm0, eax
+        vmulss  xmm0, xmm0, [rip + _neg_half]
+        vmulss  xmm0, xmm0, 4[rdi]
+        vaddss  xmm0, xmm0, 4[rsp]
+        vmovss  4[rsp], xmm0           #4[rsp] = v.y - 0.5 * coil->P * (coil->N - 1)
 biot_savart_loop2:
         mov     edx, 4
-        lea     r8, .cos_table[rip]
-        lea     r9, .sin_table[rip]
+        lea     r8, [rip + _cos_table]
+        lea     r9, [rip + _sin_table]
 biot_savart_loop1:
         vmovaps ymm0, [r8]
         vmovaps ymm2, 32[r8]
@@ -33,15 +32,13 @@ biot_savart_loop1:
         add     r9, 64
 
         vbroadcastss ymm4, [rsp]      #ymm4[3:0] = v.x
-        vmovss  xmm5, 4[rsp]
+        vbroadcastss ymm5, 4[rsp]
         vbroadcastss ymm6, 8[rsp]      #ymm6[3:0] = v.z
         vbroadcastss ymm7, [rdi]        #ymm7[3:0] = coil->R
         vmovaps ymm10, ymm4
         vmovaps ymm11, ymm6
-        subss   xmm5, 32[rsp]
 
         vfnmadd231ps ymm4, ymm7, ymm0   #ymm4 = v.x - coil->R * cos_table[3:0]
-        vbroadcastss ymm5, xmm5         #ymm5 = v.y - 24[rsp]
         vfnmadd231ps ymm6, ymm7, ymm1   #ymm6 = v.z - coil->R * sin_table[3:0]
         vfnmadd231ps ymm10, ymm7, ymm2  #ymm10 = v.x - coil->R * cos_table[7:4]
         vfnmadd231ps ymm11, ymm7, ymm3  #ymm11 = v.z - coil->R * sin_table[7:4]
@@ -71,23 +68,21 @@ biot_savart_loop1:
         vmovaps ymm1, ymm7
 
         vrsqrtps ymm6, ymm8             #Y0 = approx(1/sqrt(ymm8))
-        vbroadcastss ymm7, .onehalf[rip] #ymm7[3:0] = 1.5
-        vmulps  ymm8, ymm8, .neg_half[rip] #ymm8 = -0.5 * X
+        vbroadcastss ymm7, [rip + _three] #ymm7[3:0] = 3
 
-        vmulps  ymm9, ymm8, ymm6        #ymm9 = -0.5 * X * Y0
-        vfmadd213ps ymm9, ymm6, ymm7    #ymm9 = 1.5 - 0.5 * X * Y0 * Y0
-        vmulps  ymm6, ymm9, ymm6        #ymm6 = Y1 = Y0 * (1.5 - 0.5 * X * Y0 * Y0)
+        vmulps  ymm9, ymm8, ymm6        #ymm9 = X * Y0
+        vfnmadd213ps ymm9, ymm6, ymm7   #ymm9 = 3 - X * Y0 * Y0
+        vmulps  ymm6, ymm9, ymm6        #ymm6 = Y1 = Y0 * (3 - X * Y0 * Y0)
         vmulps  ymm8, ymm6, ymm6
-        vmulps  ymm6, ymm6, ymm8        #ymm6 = 1.0/sqrt(X**2+Y**2+Z**2)**3
+        vmulps  ymm6, ymm6, ymm8        #ymm6 = 8.0/sqrt(X**2+Y**2+Z**2)**3
 
         vrsqrtps ymm13, ymm12
-        vmulps  ymm12, ymm12, .neg_half[rip]
 
         vmulps  ymm14, ymm13, ymm12
-        vfmadd213ps ymm14, ymm13, ymm7
+        vfnmadd213ps ymm14, ymm13, ymm7
         vmulps  ymm13, ymm14, ymm13
         vmulps  ymm14, ymm13, ymm13
-        vmulps  ymm7, ymm13, ymm14      #ymm7 = 1.0/sqrt(X**2+Y**2+Z**2)**3
+        vmulps  ymm7, ymm13, ymm14      #ymm7 = 8.0/sqrt(X**2+Y**2+Z**2)**3
 
         vdpps   ymm0, ymm0, ymm6, 0xFF
         vdpps   ymm1, ymm1, ymm6, 0xFF
@@ -111,40 +106,30 @@ biot_savart_loop1:
         vshufps xmm0, xmm3, xmm2, 0x44
 
         vbroadcastss xmm3, 36[rsp]
-        vmulps  xmm0, xmm0, xmm3
-        vaddps  xmm0, xmm0, 16[rsp]
-        vmovaps 16[rsp], xmm0
+        vfmadd231ps xmm15, xmm0, xmm3
 
         sub     edx, 1
         jne     biot_savart_loop1
-        vmovss  xmm0, 32[rsp]
+        vmovss  xmm0, 4[rsp]
         vaddss  xmm0, xmm0, 4[rdi]
-        vmovss  32[rsp], xmm0
+        vmovss  4[rsp], xmm0
         sub     ecx, 1
         jne     biot_savart_loop2
-        vmovaps xmm0, 16[rsp]
-        vmovss  xmm1, 24[rsp]
-        addq    rsp, 40
+        vmovaps 16[rsp], xmm15
+        vmovaps xmm0, xmm15
+        vmovss  xmm1, 8[rsp]
+        add     rsp, 40
         ret
-        .size   biot_savart, .-biot_savart
-        .section .rodata,"a",@progbits
-        .align  4
-.b_scale:
-        .float 9.817477042468104e-09
-.onehalf:
-        .float 1.5
-        .align  32
-.neg_half:
-        .float -0.5
-        .float -0.5
-        .float -0.5
-        .float -0.5
-        .float -0.5
-        .float -0.5
-        .float -0.5
-        .float -0.5
-        .align  32
-.sin_table:
+        .data
+        .align  2
+_b_scale:
+        .float  1.2271846303E-9
+_neg_half:
+        .float  -0.5
+_three:
+        .float  3
+        .align  5
+_sin_table:
         .float 0.0
         .float 0.0980171403296
         .float 0.195090322016
@@ -209,8 +194,7 @@ biot_savart_loop1:
         .float -0.290284677254
         .float -0.195090322016
         .float -0.0980171403296
-        .align  32
-.cos_table:
+_cos_table:
         .float 1.0
         .float 0.995184726672
         .float 0.980785280403
