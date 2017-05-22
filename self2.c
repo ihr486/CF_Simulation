@@ -11,7 +11,7 @@
 
 typedef struct vector_tag
 {
-    float x, y, z;
+    float x, y, z, w;
 } vector_t;
 
 typedef struct coil_tag
@@ -22,7 +22,7 @@ typedef struct coil_tag
 
 //extern vector_t biot_savart(const vector_t v, const coil_t *coil);
 
-static const float cos_table[PHI_DIV] = {
+static const float _Alignas(32) cos_table[PHI_DIV] = {
     1.0,
     0.995184726672,
     0.980785280403,
@@ -88,7 +88,7 @@ static const float cos_table[PHI_DIV] = {
     0.980785280403,
     0.995184726672
 };
-static const float sin_table[PHI_DIV] = {
+static const float _Alignas(32) sin_table[PHI_DIV] = {
     0.0,
     0.0980171403296,
     0.195090322016,
@@ -178,22 +178,22 @@ static vector_t vscale(const vector_t v, float c)
 
 static float vsize(const vector_t v)
 {
-    return sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+    return sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
 }
 
 static vector_t biot_savart(const vector_t v, const coil_t *coil)
 {
     vector_t B = {0, 0, 0};
-    float l = 2.0 * PI * coil->R / THETA_DIV;
+    float l = 2.0f * PI * coil->R / THETA_DIV;
     for (int i = 0; i < coil->N; i++)
     {
         for (int theta = 0; theta < THETA_DIV; theta++)
         {
-            vector_t p = {coil->R * cos_table[theta], coil->P * (i - 0.5 * (coil->N - 1)), coil->R * sin_table[theta]};
+            vector_t p = {coil->R * cos_table[theta], coil->P * (i - 0.5f * (coil->N - 1)), coil->R * sin_table[theta]};
             vector_t j = {-sin_table[theta], 0, cos_table[theta]};
             vector_t r = vsub(v, p);
             float d = vsize(r);
-            B = vadd(B, vscale(vcross(j, r), 1E-7 * l / (d * d * d)));
+            B = vadd(B, vscale(vcross(j, r), 1E-7f * l / (d * d * d)));
         }
     }
     return B;
@@ -208,8 +208,8 @@ static float self_inductance(const coil_t *coil)
         {
             for (int r = 0; r < R_DIV; r++)
             {
-                float dist = coil->R * (r + 0.5) / R_DIV;
-                vector_t v = {dist * cos_table[phi], 0.5 * d * coil->P * (coil->N - 1) / L_DIV, dist * sin_table[phi]};
+                float dist = coil->R * (r + 0.5f) / R_DIV;
+                vector_t v = {dist * cos_table[phi], 0.5f * d * coil->P * (coil->N - 1) / L_DIV, dist * sin_table[phi]};
                 float dS = PI * coil->R * coil->R / (R_DIV * R_DIV) * (2 * r + 1) / PHI_DIV;
                 vector_t B = biot_savart(v, coil);
                 B_total -= dS * B.y;
