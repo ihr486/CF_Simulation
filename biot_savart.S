@@ -1,8 +1,8 @@
         .intel_syntax noprefix
         .text
         .p2align 4,,15
-        .global _biot_savart
-_biot_savart:
+        .global biot_savart
+biot_savart:
         sub     rsp, 40                 #Align stack to 16bytes
         vmovapd [rsp], xmm0
         vmovss  8[rsp], xmm1
@@ -121,14 +121,14 @@ biot_savart_loop1:
         add     rsp, 40
         ret
         .data
-        .align  2
+        .align  4
 _b_scale:
         .float  1.2271846303E-9
 _neg_half:
         .float  -0.5
 _three:
         .float  3
-        .align  5
+        .align  32
 _sin_table:
         .float 0.0
         .float 0.0980171403296
