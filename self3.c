@@ -5,8 +5,8 @@
 
 #define THETA_DIV (64)  //Division of the coil current
 #define PHI_DIV (64)    //Angular resolution of the magnetic field
-#define R_DIV (32)      //Radial resolution of the magnetic field
-#define L_DIV (32)      //Depth resolution of the magnetic field
+#define R_DIV (64)      //Radial resolution of the magnetic field
+#define L_DIV (64)      //Depth resolution of the magnetic field
 #define PI (3.14159265359)  //Approximation of pi
 
 typedef struct vector_tag
@@ -219,7 +219,7 @@ static float self_inductance(const coil_t *coil)
 
 int main(int argc, const char *argv[])
 {
-    coil_t tx = {30E-3, 0.22E-3, 100};
+    coil_t tx = {30E-3, 0.22E-3, 50};
     double start_time = (double)clock() / CLOCKS_PER_SEC;
     float L = self_inductance(&tx);
     double finish_time = (double)clock() / CLOCKS_PER_SEC;

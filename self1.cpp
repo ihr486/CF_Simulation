@@ -100,7 +100,7 @@ static double self_inductance(const coil_t& coil)
     return Bs * coil.N / L_DIV;
 }
 
-/*static double first_elliptic_integral(double k)
+static double first_elliptic_integral(double k)
 {
     double a = 1.0, b = sqrt(1.0 - k * k);
     while (b < 0.999 * a)
@@ -141,12 +141,23 @@ static double self_inductance_ref(const coil_t& coil)
     double k = sqrt(k2);
     double T = 4.0 / (3.0 * PI * b * k2 * k) * ((2.0 * k2 - 1) * first_elliptic_integral(k) + (1.0 - k2) * second_elliptic_integral(k) - k2 * k);
     return 4E-7 * PI * PI * coil.N * coil.N * coil.R * T / (2.0 * b);
-}*/
+}
+
+static double self_inductance_ref2(const coil_t& coil)
+{
+    double d = coil.P * coil.N / coil.R;
+    double c = 1.0 / (2.3 + 1.6 * d + 0.44 * d * d);
+    return mu0 * coil.N * coil.N * coil.R * (c + log(1 + PI / d));
+}
 
 int main(int argc, const char *argv[])
 {
-    coil_t tx{30E-3, 0.1E-3, 0.22E-3, 50};
+    coil_t tx{30E-3, 0.1E-3, 0.22E-3, 100};
     double L = self_inductance(tx);
     printf("Self inductance [Biot-Savart] = %lf[uH]\n", L * 1E+6);
+    double L2 = self_inductance_ref(tx);
+    printf("Self inductance [1] = %lf[uH]\n", L2 * 1E+6);
+    double L3 = self_inductance_ref2(tx);
+    printf("Self inductance [2] = %lf[uH]\n", L3 * 1E+6);
     return 0;
 }
